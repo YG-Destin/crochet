@@ -28,6 +28,35 @@
 
 <canvas id="canvas"></canvas>
 
+<!-- 🌐 국제 표준 뜨개 기호 세트 -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
+  <defs>
+    <symbol id="st-chain" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="6" stroke="#111" stroke-width="1.5" fill="none"/>
+    </symbol>
+    <symbol id="st-sc" viewBox="0 0 20 20">
+      <path d="M10 2 V18" stroke="#111" stroke-width="1.5"/>
+      <path d="M5 10 H15" stroke="#111" stroke-width="1.5"/>
+    </symbol>
+    <symbol id="st-dc" viewBox="0 0 20 20">
+      <path d="M10 2 V18" stroke="#111" stroke-width="1.5"/>
+      <path d="M7 6 L13 6" stroke="#111" stroke-width="1.2"/>
+      <path d="M7 10 L13 10" stroke="#111" stroke-width="1.2"/>
+      <path d="M7 14 L13 14" stroke="#111" stroke-width="1.2"/>
+    </symbol>
+    <symbol id="st-inc" viewBox="0 0 20 20">
+      <path d="M5 18 L10 4 L15 18" stroke="#111" stroke-width="1.5" fill="none"/>
+    </symbol>
+    <symbol id="st-dec" viewBox="0 0 20 20">
+      <path d="M5 4 L10 18 L15 4" stroke="#111" stroke-width="1.5" fill="none"/>
+    </symbol>
+    <symbol id="st-slst" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="2.5" stroke="#111" stroke-width="1.5" fill="none"/>
+      <path d="M5 10 H15" stroke="#111" stroke-width="1.5"/>
+    </symbol>
+  </defs>
+</svg>
+
 <!-- 스티치 기호 안내 -->
 <div id="legend" style="max-width:700px;margin:20px auto;padding:12px;border:1px solid #ddd;border-radius:6px;text-align:left;font-size:14px;line-height:1.6;">
   <b>🧶 스티치 기호 안내</b><br>
@@ -55,7 +84,7 @@ const svg = document.getElementById('svgOut');
 const fileInput = document.getElementById('fileInput');
 const loadBtn = document.getElementById('loadBtn');
 
-// 🖼️ 파일 불러오기 버튼 클릭 시 input 호출
+// 🖼️ 파일 불러오기 버튼
 loadBtn.onclick = () => fileInput.click();
 fileInput.onchange = e => {
   const file = e.target.files[0];
@@ -63,7 +92,7 @@ fileInput.onchange = e => {
   handleImage(file);
 };
 
-// 📂 드래그 앤 드롭도 그대로 유지
+// 📂 드래그 앤 드롭 지원
 canvas.ondragover = e => { e.preventDefault(); canvas.style.border='2px dashed #888'; };
 canvas.ondragleave = e => { e.preventDefault(); canvas.style.border='1px solid #ccc'; };
 canvas.ondrop = e => {
@@ -74,7 +103,7 @@ canvas.ondrop = e => {
   handleImage(file);
 };
 
-// 공통 이미지 처리 함수
+// 공통 이미지 처리
 function handleImage(file){
   const img = new Image();
   img.onload = () => {
@@ -100,7 +129,7 @@ function convertToPattern(w=canvas.width,h=canvas.height){
       const i=(y*w+x)*4;
       const avg=(data[i]+data[i+1]+data[i+2])/3;
       const sym=pickSymbol(avg);
-      path+=`<text x="${x}" y="${y}" font-size="8" fill="${pickColor(sym)}">${sym}</text>`;
+      path+=`<use href="#${pickSymbolID(sym)}" x="${x}" y="${y}" width="20" height="20"/>`;
     }
   }
   svg.innerHTML=`<rect width="${w}" height="${h}" fill="#fff" stroke="#ddd"/>`+path;
@@ -114,14 +143,14 @@ function pickSymbol(bright){
   return "/\\";
 }
 
-function pickColor(symbol){
-  switch(symbol){
-    case 'X': return "#444";
-    case 'T': return "#2b6cb0";
-    case '○': return "#2563eb";
-    case 'V': return "#16a34a";
-    case '/\\': return "#dc2626";
-    default: return "#999";
+function pickSymbolID(sym){
+  switch(sym){
+    case "X": return "st-sc";
+    case "T": return "st-dc";
+    case "○": return "st-chain";
+    case "V": return "st-inc";
+    case "/\\": return "st-dec";
+    default: return "st-slst";
   }
 }
 
