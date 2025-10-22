@@ -15,12 +15,16 @@
     padding:10px 16px; font-size:13px; border-radius:6px;
     box-shadow:0 2px 5px rgba(0,0,0,0.2); cursor:pointer;
   }
+  #credit {font-size:13px; color:#555; margin-top:10px;}
 </style>
 </head>
 <body>
 
 <h3>🧶 Jini Crochet Pattern (App)</h3>
-<canvas id="canvas" width="800" height="800"></canvas>
+<div id="credit">✨️앱 제작 : 연유진🧵</div>
+
+<canvas id="canvas"></canvas>
+
 <!-- 스티치 기호 안내 -->
 <div id="legend" style="max-width:700px;margin:20px auto;padding:12px;border:1px solid #ddd;border-radius:6px;text-align:left;font-size:14px;line-height:1.6;">
   <b>🧶 스티치 기호 안내</b><br>
@@ -30,7 +34,8 @@
   <span style="color:#16a34a;">V</span> — 늘림 (Increase)<br>
   <span style="color:#dc2626;">/\\</span> — 줄임 (Decrease)
 </div>
-<svg id="svgOut" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>
+
+<svg id="svgOut" xmlns="http://www.w3.org/2000/svg"></svg>
 <button id="saveBtn">💾 자동 저장</button>
 
 <script>
@@ -54,26 +59,33 @@ canvas.ondrop = e => {
   if(!file) return;
   const img = new Image();
   img.onload = () => {
-    ctx.clearRect(0,0,800,800);
-    ctx.drawImage(img,0,0,800,800);
-    convertToPattern();
+    // 🔹 원본 크기로 캔버스와 SVG 조정
+    canvas.width = img.width;
+    canvas.height = img.height;
+    svg.setAttribute("viewBox", `0 0 ${img.width} ${img.height}`);
+    svg.setAttribute("width", img.width);
+    svg.setAttribute("height", img.height);
+
+    ctx.clearRect(0,0,img.width,img.height);
+    ctx.drawImage(img,0,0,img.width,img.height);
+    convertToPattern(img.width,img.height);
   };
   img.src = URL.createObjectURL(file);
 };
 
-function convertToPattern(){
-  const imgData = ctx.getImageData(0,0,800,800);
+function convertToPattern(w=canvas.width,h=canvas.height){
+  const imgData = ctx.getImageData(0,0,w,h);
   const data = imgData.data;
   let path="";
-  for(let y=0; y<800; y+=20){
-    for(let x=0; x<800; x+=20){
-      const i = (y*800 + x)*4;
-      const avg = (data[i]+data[i+1]+data[i+2])/3;
-      const sym = pickSymbol(avg);
-      path += `<text x="${x}" y="${y}" font-size="8" fill="${pickColor(sym)}">${sym}</text>`;
+  for(let y=0;y<h;y+=20){
+    for(let x=0;x<w;x+=20){
+      const i=(y*w+x)*4;
+      const avg=(data[i]+data[i+1]+data[i+2])/3;
+      const sym=pickSymbol(avg);
+      path+=`<text x="${x}" y="${y}" font-size="8" fill="${pickColor(sym)}">${sym}</text>`;
     }
   }
-  svg.innerHTML = `<rect width="800" height="800" fill="#fff" stroke="#ddd"/>` + path;
+  svg.innerHTML=`<rect width="${w}" height="${h}" fill="#fff" stroke="#ddd"/>`+path;
 }
 
 function pickSymbol(bright){
@@ -83,6 +95,7 @@ function pickSymbol(bright){
   if(bright<150) return "V";
   return "/\\";
 }
+
 function pickColor(symbol){
   switch(symbol){
     case 'X': return "#444";
@@ -98,20 +111,15 @@ document.getElementById('saveBtn').onclick = () => {
   const name = prompt("저장할 파일 이름을 입력하세요 (예: greenhair):");
   if (!name) return;
 
-  // 현재 SVG와 캔버스 크기 자동 감지
-  const svgEl = document.getElementById('svgOut');
-  const viewBox = svgEl.getAttribute('viewBox') || '0 0 800 800';
-  const [ , , w, h ] = viewBox.split(' ').map(Number);
+  const svgEl=document.getElementById('svgOut');
+  const viewBox=svgEl.getAttribute('viewBox')||'0 0 800 800';
+  const [ , , w, h ]=viewBox.split(' ').map(Number);
+  const svgData=svgEl.outerHTML;
+  const imgSrc=canvas.toDataURL("image/png");
 
-  // SVG 데이터 추출
-  const svgData = svgEl.outerHTML;
-
-  // 🔹 원본 이미지 캔버스 → PNG base64 변환
-  const imgSrc = canvas.toDataURL("image/png");
-
-  // 🔹 원본 이미지 + 스티치 안내표 추가
-  const additions = `
+  const additions=`
     <image href="${imgSrc}" x="0" y="0" width="${w}" height="${h}" opacity="0.25"/>
+    <text x="20" y="20" font-size="14" fill="#444">✨️앱 제작 : 연유진🧵</text>
     <g font-family="monospace" font-size="10" transform="translate(20,${h + 20})">
       <text fill="#000">🧶 스티치 기호 안내</text>
       <text y="15" fill="#444">X — 짧은뜨기 (Single Crochet)</text>
@@ -122,15 +130,12 @@ document.getElementById('saveBtn').onclick = () => {
     </g>
   `;
 
-  // 🔹 원본 이미지 + 안내표를 SVG 맨 아래 삽입
-  const finalSvg = svgData.replace('</svg>', additions + '</svg>');
-
-  // 🔹 파일로 저장
-  const blob = new Blob([finalSvg], {type:'image/svg+xml;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${name}.svg`;
+  const finalSvg=svgData.replace('</svg>',additions+'</svg>');
+  const blob=new Blob([finalSvg],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=`${name}.svg`;
   link.click();
   URL.revokeObjectURL(url);
 };
