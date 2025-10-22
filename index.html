@@ -9,12 +9,12 @@
   html, body {margin:0; padding:0; background:#fff; font-family:monospace; text-align:center;}
   #canvas {border:1px solid #ccc; margin:10px auto; display:block;}
   #svgOut {max-width:900px; margin:20px auto; display:block;}
-  #saveBtn {
-    position:fixed; bottom:20px; right:20px;
-    background:#16a34a; color:#fff; border:none;
-    padding:10px 16px; font-size:13px; border-radius:6px;
-    box-shadow:0 2px 5px rgba(0,0,0,0.2); cursor:pointer;
+  #saveBtn, #loadBtn {
+    position:fixed; bottom:20px; padding:10px 16px; font-size:13px;
+    color:#fff; border:none; border-radius:6px; box-shadow:0 2px 5px rgba(0,0,0,0.2); cursor:pointer;
   }
+  #saveBtn {right:20px; background:#16a34a;}
+  #loadBtn {left:20px; background:#2563eb;}
   #credit {font-size:13px; color:#555; margin-top:10px;}
 </style>
 </head>
@@ -22,6 +22,9 @@
 
 <h3>🧶 Jini Crochet Pattern (App)</h3>
 <div id="credit">✨️앱 제작 : 연유진🧵</div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none;">
+<button id="loadBtn">🖼️ 파일 불러오기</button>
 
 <canvas id="canvas"></canvas>
 
@@ -49,7 +52,18 @@ if ('serviceWorker' in navigator) {
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const svg = document.getElementById('svgOut');
+const fileInput = document.getElementById('fileInput');
+const loadBtn = document.getElementById('loadBtn');
 
+// 🖼️ 파일 불러오기 버튼 클릭 시 input 호출
+loadBtn.onclick = () => fileInput.click();
+fileInput.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  handleImage(file);
+};
+
+// 📂 드래그 앤 드롭도 그대로 유지
 canvas.ondragover = e => { e.preventDefault(); canvas.style.border='2px dashed #888'; };
 canvas.ondragleave = e => { e.preventDefault(); canvas.style.border='1px solid #ccc'; };
 canvas.ondrop = e => {
@@ -57,9 +71,13 @@ canvas.ondrop = e => {
   canvas.style.border='1px solid #ccc';
   const file = e.dataTransfer.files[0];
   if(!file) return;
+  handleImage(file);
+};
+
+// 공통 이미지 처리 함수
+function handleImage(file){
   const img = new Image();
   img.onload = () => {
-    // 🔹 원본 크기로 캔버스와 SVG 조정
     canvas.width = img.width;
     canvas.height = img.height;
     svg.setAttribute("viewBox", `0 0 ${img.width} ${img.height}`);
@@ -71,7 +89,7 @@ canvas.ondrop = e => {
     convertToPattern(img.width,img.height);
   };
   img.src = URL.createObjectURL(file);
-};
+}
 
 function convertToPattern(w=canvas.width,h=canvas.height){
   const imgData = ctx.getImageData(0,0,w,h);
