@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="manifest" href="./manifest.json" />
-<title>🧶 Jini Crochet (App)</title>
+<title>🧶 Jini Crochet</title>
 <style>
   html, body {margin:0; padding:0; background:#fff; font-family:monospace; text-align:center;}
   #canvas {border:1px solid #ccc; margin:10px auto; display:block;}
@@ -30,7 +30,7 @@
 
 <!-- 🌐 국제 표준 뜨개 기호 세트 -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
-  <defs>
+  <defs id="symbolDefs">
     <symbol id="st-chain" viewBox="0 0 20 20">
       <circle cx="10" cy="10" r="6" stroke="#111" stroke-width="1.5" fill="none"/>
     </symbol>
@@ -78,89 +78,106 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.error('❌ SW registration failed:', err));
 }
 
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const svg = document.getElementById('svgOut');
-const fileInput = document.getElementById('fileInput');
-const loadBtn = document.getElementById('loadBtn');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const svg=document.getElementById('svgOut');
+const fileInput=document.getElementById('fileInput');
+const loadBtn=document.getElementById('loadBtn');
+const defs=document.getElementById('symbolDefs');
 
-// 🖼️ 파일 불러오기 버튼
-loadBtn.onclick = () => fileInput.click();
-fileInput.onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
+// 파일 불러오기 버튼
+loadBtn.onclick=()=>fileInput.click();
+fileInput.onchange=e=>{
+  const file=e.target.files[0];
+  if(!file)return;
   handleImage(file);
 };
 
-// 📂 드래그 앤 드롭 지원
-canvas.ondragover = e => { e.preventDefault(); canvas.style.border='2px dashed #888'; };
-canvas.ondragleave = e => { e.preventDefault(); canvas.style.border='1px solid #ccc'; };
-canvas.ondrop = e => {
+// 드래그 앤 드롭
+canvas.ondragover=e=>{e.preventDefault();canvas.style.border='2px dashed #888';};
+canvas.ondragleave=e=>{e.preventDefault();canvas.style.border='1px solid #ccc';};
+canvas.ondrop=e=>{
   e.preventDefault();
   canvas.style.border='1px solid #ccc';
-  const file = e.dataTransfer.files[0];
-  if(!file) return;
+  const file=e.dataTransfer.files[0];
+  if(!file)return;
   handleImage(file);
 };
 
-// 공통 이미지 처리
+// 이미지 로드
 function handleImage(file){
-  const img = new Image();
-  img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    svg.setAttribute("viewBox", `0 0 ${img.width} ${img.height}`);
-    svg.setAttribute("width", img.width);
-    svg.setAttribute("height", img.height);
+  const img=new Image();
+  img.onload=()=>{
+    canvas.width=img.width;
+    canvas.height=img.height;
+    svg.setAttribute("viewBox",`0 0 ${img.width} ${img.height}`);
+    svg.setAttribute("width",img.width);
+    svg.setAttribute("height",img.height);
 
     ctx.clearRect(0,0,img.width,img.height);
     ctx.drawImage(img,0,0,img.width,img.height);
     convertToPattern(img.width,img.height);
   };
-  img.src = URL.createObjectURL(file);
+  img.src=URL.createObjectURL(file);
 }
 
-function convertToPattern(w=canvas.width,h=canvas.height){
-  const imgData = ctx.getImageData(0,0,w,h);
-  const data = imgData.data;
-  let path="";
+// 픽셀→기호 변환
+function convertToPattern(w,h){
+  const imgData=ctx.getImageData(0,0,w,h);
+  const data=imgData.data;
+  let out="";
   for(let y=0;y<h;y+=20){
     for(let x=0;x<w;x+=20){
       const i=(y*w+x)*4;
       const avg=(data[i]+data[i+1]+data[i+2])/3;
       const sym=pickSymbol(avg);
-      path+=`<use href="#${pickSymbolID(sym)}" x="${x}" y="${y}" width="20" height="20"/>`;
+      const symbolEl=defs.querySelector(`#${pickSymbolID(sym)}`);
+      if(symbolEl){
+        const clone=symbolEl.cloneNode(true);
+        const inner=clone.innerHTML.replace(/stroke="#111"/g,`stroke="${pickColor(sym)}"`);
+        out+=`<g transform="translate(${x},${y}) scale(1)">${inner}</g>`;
+      }
     }
   }
-  svg.innerHTML=`<rect width="${w}" height="${h}" fill="#fff" stroke="#ddd"/>`+path;
+  svg.innerHTML=`<rect width="${w}" height="${h}" fill="#fff" stroke="#ddd"/>`+out;
 }
 
 function pickSymbol(bright){
-  if(bright<50) return "X";
-  if(bright<90) return "T";
-  if(bright<120) return "○";
-  if(bright<150) return "V";
-  return "/\\";
+  if(bright<50)return"X";
+  if(bright<90)return"T";
+  if(bright<120)return"○";
+  if(bright<150)return"V";
+  return"/\\";
 }
-
 function pickSymbolID(sym){
   switch(sym){
-    case "X": return "st-sc";
-    case "T": return "st-dc";
-    case "○": return "st-chain";
-    case "V": return "st-inc";
-    case "/\\": return "st-dec";
-    default: return "st-slst";
+    case"X":return"st-sc";
+    case"T":return"st-dc";
+    case"○":return"st-chain";
+    case"V":return"st-inc";
+    case"/\\":return"st-dec";
+    default:return"st-slst";
+  }
+}
+function pickColor(sym){
+  switch(sym){
+    case"X":return"#444";
+    case"T":return"#2b6cb0";
+    case"○":return"#2563eb";
+    case"V":return"#16a34a";
+    case"/\\":return"#dc2626";
+    default:return"#999";
   }
 }
 
-document.getElementById('saveBtn').onclick = () => {
-  const name = prompt("저장할 파일 이름을 입력하세요 (예: greenhair):");
-  if (!name) return;
+// 저장
+document.getElementById('saveBtn').onclick=()=>{
+  const name=prompt("저장할 파일 이름을 입력하세요 (예: greenhair):");
+  if(!name)return;
 
   const svgEl=document.getElementById('svgOut');
   const viewBox=svgEl.getAttribute('viewBox')||'0 0 800 800';
-  const [ , , w, h ]=viewBox.split(' ').map(Number);
+  const[, ,w,h]=viewBox.split(' ').map(Number);
   const svgData=svgEl.outerHTML;
   const imgSrc=canvas.toDataURL("image/png");
 
@@ -173,7 +190,7 @@ document.getElementById('saveBtn').onclick = () => {
       <text y="30" fill="#2b6cb0">T — 한길긴뜨기 (Double Crochet)</text>
       <text y="45" fill="#2563eb">○ — 사슬뜨기 (Chain Stitch)</text>
       <text y="60" fill="#16a34a">V — 늘림 (Increase)</text>
-      <text y="75" fill="#dc2626">/\\ — 줄임 (Decrease)</text>
+      <text y="75" fill="#dc2626">/\ — 줄임 (Decrease)</text>
     </g>
   `;
 
