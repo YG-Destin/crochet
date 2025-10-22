@@ -136,18 +136,29 @@ function pickSymbol(bright){
 document.getElementById('saveBtn').onclick = async () => {
   const name = prompt("저장할 파일 이름:");
   if (!name) return;
+
   const svgEl = document.getElementById('svgOut');
   const viewBox = svgEl.getAttribute('viewBox') || '0 0 800 800';
   const [ , , w, h ] = viewBox.split(' ').map(Number);
-  const svgData = svgEl.outerHTML;
   const imgSrc = uploadedImgSrc || canvas.toDataURL("image/png");
+
+  // 국제기호 defs 복사
+  const defs = document.querySelector('svg defs').outerHTML;
   const legend = document.getElementById('legend').outerHTML;
   const additions = `
-    <image href="${imgSrc}" x="0" y="0" width="${w}" height="${h}" opacity="0.25"/>
-    <text x="20" y="20" font-size="14" fill="#444">✨️앱 제작 : 연유진🧵</text>
-    <g transform="translate(0,${h + 20})">${legend}</g>
+    ${defs}
+    <g>
+      <image href="${imgSrc}" x="0" y="0" width="${w}" height="${h}" opacity="0.25"/>
+      ${svgEl.innerHTML}
+      <text x="20" y="20" font-size="14" fill="#444">✨앱 제작 : 연유진🧵</text>
+      <g transform="translate(0,${h + 20})">${legend}</g>
+    </g>
   `;
-  const finalSvg = svgData.replace('</svg>', additions + '</svg>');
+  const finalSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h + 140}">
+    ${additions}
+  </svg>`;
+
+  // SVG 저장
   const svgBlob = new Blob([finalSvg], {type:'image/svg+xml;charset=utf-8'});
   const svgUrl = URL.createObjectURL(svgBlob);
   const linkSvg = document.createElement('a');
@@ -155,6 +166,30 @@ document.getElementById('saveBtn').onclick = async () => {
   linkSvg.download = `${name}.svg`;
   linkSvg.click();
   URL.revokeObjectURL(svgUrl);
+
+  // PNG 저장
+  const pngCanvas = document.createElement('canvas');
+  pngCanvas.width = w;
+  pngCanvas.height = h + 140;
+  const ctx2 = pngCanvas.getContext('2d');
+
+  const img = new Image();
+  const svgBlobForPng = new Blob([finalSvg], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrlForPng = URL.createObjectURL(svgBlobForPng);
+
+  img.onload = () => {
+    ctx2.drawImage(img, 0, 0);
+    URL.revokeObjectURL(svgUrlForPng);
+    pngCanvas.toBlob(blob => {
+      const pngUrl = URL.createObjectURL(blob);
+      const linkPng = document.createElement('a');
+      linkPng.href = pngUrl;
+      linkPng.download = `${name}.png`;
+      linkPng.click();
+      URL.revokeObjectURL(pngUrl);
+    }, 'image/png');
+  };
+  img.src = svgUrlForPng;
 };
 </script>
 </body>
