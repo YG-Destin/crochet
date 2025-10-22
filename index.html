@@ -4,22 +4,25 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="manifest" href="./manifest.json" />
-<title>🧶 Jini Crochet (App)</title>
+<meta name="theme-color" content="#16a34a" />
+<title>🧶 Dolce JIN Crochet</title>
 <style>
   html, body {margin:0; padding:0; background:#fff; font-family:monospace; text-align:center;}
   #canvas {border:1px solid #ccc; margin:10px auto; display:block;}
   #svgOut {max-width:900px; margin:20px auto; display:block;}
-  #saveBtn {
-    position:fixed; bottom:20px; right:20px;
+  #saveBtn, #uploadBtn {
+    position:fixed; bottom:20px;
     background:#16a34a; color:#fff; border:none;
     padding:10px 16px; font-size:13px; border-radius:6px;
     box-shadow:0 2px 5px rgba(0,0,0,0.2); cursor:pointer;
   }
+  #saveBtn { right:20px; }
+  #uploadBtn { left:20px; background:#2563eb; }
 </style>
 </head>
 <body>
 
-<!-- 🧶 국제 표준 뜨개기호 SVG 심볼 세트 -->
+<!-- 국제 표준 뜨개기호 -->
 <svg style="display:none;" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <symbol id="st-chain" viewBox="0 0 20 20">
@@ -47,33 +50,38 @@
 </svg>
 
 <h3>🧶 Jini Crochet Pattern (App)</h3>
+<input type="file" id="fileInput" accept="image/*" style="margin:10px auto; display:block;" />
 <canvas id="canvas" width="800" height="800"></canvas>
 
-<!-- 스티치 기호 안내 (국제기호 버전) -->
-<svg id="legend" xmlns="http://www.w3.org/2000/svg"
-     width="700" height="120" viewBox="0 0 700 120"
+<svg id="legend" xmlns="http://www.w3.org/2000/svg" width="700" height="120" viewBox="0 0 700 120"
      style="margin:20px auto; display:block; border:1px solid #ddd; border-radius:6px;">
   <text x="15" y="20" font-size="14" font-family="monospace" fill="#000">🧶 스티치 기호 안내</text>
   <use href="#st-chain" x="20" y="40" width="20" height="20" stroke="#2563eb" />
-  <text x="50" y="52" font-size="12" fill="#2563eb">사슬뜨기 (Chain Stitch)</text>
+  <text x="50" y="52" font-size="12" fill="#2563eb">사슬뜨기 (Chain)</text>
   <use href="#st-sc" x="20" y="70" width="20" height="20" stroke="#444" />
-  <text x="50" y="82" font-size="12" fill="#444">짧은뜨기 (Single Crochet)</text>
+  <text x="50" y="82" font-size="12" fill="#444">짧은뜨기 (Single)</text>
   <use href="#st-dc" x="220" y="40" width="20" height="20" stroke="#2b6cb0" />
-  <text x="250" y="52" font-size="12" fill="#2b6cb0">한길긴뜨기 (Double Crochet)</text>
+  <text x="250" y="52" font-size="12" fill="#2b6cb0">한길긴뜨기 (Double)</text>
   <use href="#st-inc" x="220" y="70" width="20" height="20" stroke="#16a34a" />
   <text x="250" y="82" font-size="12" fill="#16a34a">늘림 (Increase)</text>
   <use href="#st-dec" x="420" y="40" width="20" height="20" stroke="#dc2626" />
   <text x="450" y="52" font-size="12" fill="#dc2626">줄임 (Decrease)</text>
   <use href="#st-slst" x="420" y="70" width="20" height="20" stroke="#999" />
-  <text x="450" y="82" font-size="12" fill="#999">빼뜨기 (Slip Stitch)</text>
+  <text x="450" y="82" font-size="12" fill="#999">빼뜨기 (Slip)</text>
 </svg>
 
 <svg id="svgOut" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"></svg>
-<button id="saveBtn">💾 자동 저장</button>
+<button id="saveBtn">💾 저장</button>
+<button id="uploadBtn">📁 불러오기</button>
 
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./service-worker.js');
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./service-worker.js', { scope: './' })
+      .then(() => console.log('🧶 Service Worker registered'))
+      .catch(err => console.error('❌ SW failed', err));
+  });
 }
 
 const canvas = document.getElementById('canvas');
@@ -81,14 +89,13 @@ const ctx = canvas.getContext('2d');
 const svg = document.getElementById('svgOut');
 let uploadedImgSrc = null;
 
-// 파일 드래그&드롭
-canvas.ondragover = e => { e.preventDefault(); canvas.style.border='2px dashed #888'; };
-canvas.ondragleave = e => { e.preventDefault(); canvas.style.border='1px solid #ccc'; };
-canvas.ondrop = e => {
-  e.preventDefault();
-  canvas.style.border='1px solid #ccc';
-  const file = e.dataTransfer.files[0];
-  if(!file) return;
+document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = e => {
+  const file = e.target.files[0];
+  if (file) loadImage(file);
+};
+
+function loadImage(file){
   const img = new Image();
   img.onload = () => {
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -99,7 +106,7 @@ canvas.ondrop = e => {
     convertToPattern(w,h);
   };
   img.src = URL.createObjectURL(file);
-};
+}
 
 function convertToPattern(w=800,h=800){
   const imgData = ctx.getImageData(0,0,w,h);
@@ -126,53 +133,28 @@ function pickSymbol(bright){
   return "st-dec";
 }
 
-// 저장 (SVG + PNG)
 document.getElementById('saveBtn').onclick = async () => {
-  const name = prompt("저장할 파일 이름을 입력하세요 (예: greenhair):");
+  const name = prompt("저장할 파일 이름:");
   if (!name) return;
   const svgEl = document.getElementById('svgOut');
   const viewBox = svgEl.getAttribute('viewBox') || '0 0 800 800';
   const [ , , w, h ] = viewBox.split(' ').map(Number);
   const svgData = svgEl.outerHTML;
   const imgSrc = uploadedImgSrc || canvas.toDataURL("image/png");
-
   const legend = document.getElementById('legend').outerHTML;
   const additions = `
     <image href="${imgSrc}" x="0" y="0" width="${w}" height="${h}" opacity="0.25"/>
     <text x="20" y="20" font-size="14" fill="#444">✨️앱 제작 : 연유진🧵</text>
     <g transform="translate(0,${h + 20})">${legend}</g>
   `;
-
   const finalSvg = svgData.replace('</svg>', additions + '</svg>');
   const svgBlob = new Blob([finalSvg], {type:'image/svg+xml;charset=utf-8'});
   const svgUrl = URL.createObjectURL(svgBlob);
-
   const linkSvg = document.createElement('a');
   linkSvg.href = svgUrl;
   linkSvg.download = `${name}.svg`;
   linkSvg.click();
   URL.revokeObjectURL(svgUrl);
-
-  const pngCanvas = document.createElement('canvas');
-  pngCanvas.width = w; pngCanvas.height = h;
-  const pngCtx = pngCanvas.getContext('2d');
-  const img = new Image();
-  const tmpUrl = URL.createObjectURL(svgBlob);
-
-  await new Promise(resolve => {
-    img.onload = () => {
-      pngCtx.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(tmpUrl);
-      resolve();
-    };
-    img.src = tmpUrl;
-  });
-
-  const pngUrl = pngCanvas.toDataURL('image/png');
-  const linkPng = document.createElement('a');
-  linkPng.href = pngUrl;
-  linkPng.download = `${name}.png`;
-  linkPng.click();
 };
 </script>
 </body>
