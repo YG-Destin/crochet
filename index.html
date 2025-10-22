@@ -142,9 +142,10 @@ document.getElementById('saveBtn').onclick = async () => {
   const [ , , w, h ] = viewBox.split(' ').map(Number);
   const imgSrc = uploadedImgSrc || canvas.toDataURL("image/png");
 
-  // 국제기호 defs 복사
-  const defs = document.querySelector('svg defs').outerHTML;
+  const defs = document.querySelector('svg defs')?.outerHTML || "";
   const legend = document.getElementById('legend').outerHTML;
+
+  // SVG 통합
   const additions = `
     ${defs}
     <g>
@@ -154,9 +155,7 @@ document.getElementById('saveBtn').onclick = async () => {
       <g transform="translate(0,${h + 20})">${legend}</g>
     </g>
   `;
-  const finalSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h + 140}">
-    ${additions}
-  </svg>`;
+  const finalSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h + 140}">${additions}</svg>`;
 
   // SVG 저장
   const svgBlob = new Blob([finalSvg], {type:'image/svg+xml;charset=utf-8'});
@@ -167,19 +166,21 @@ document.getElementById('saveBtn').onclick = async () => {
   linkSvg.click();
   URL.revokeObjectURL(svgUrl);
 
-  // PNG 저장
+  // PNG 저장 (배경 포함)
   const pngCanvas = document.createElement('canvas');
   pngCanvas.width = w;
   pngCanvas.height = h + 140;
   const ctx2 = pngCanvas.getContext('2d');
 
   const img = new Image();
-  const svgBlobForPng = new Blob([finalSvg], { type: 'image/svg+xml;charset=utf-8' });
-  const svgUrlForPng = URL.createObjectURL(svgBlobForPng);
+  const svgForPng = new Blob([finalSvg], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrlForPng = URL.createObjectURL(svgForPng);
 
   img.onload = () => {
+    ctx2.clearRect(0, 0, w, h + 140);
     ctx2.drawImage(img, 0, 0);
     URL.revokeObjectURL(svgUrlForPng);
+
     pngCanvas.toBlob(blob => {
       const pngUrl = URL.createObjectURL(blob);
       const linkPng = document.createElement('a');
@@ -189,6 +190,7 @@ document.getElementById('saveBtn').onclick = async () => {
       URL.revokeObjectURL(pngUrl);
     }, 'image/png');
   };
+  img.onerror = e => console.error("❌ PNG 변환 중 이미지 로드 실패:", e);
   img.src = svgUrlForPng;
 };
 </script>
