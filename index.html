@@ -145,7 +145,7 @@ document.getElementById('saveBtn').onclick = async () => {
   const defs = document.querySelector('svg defs')?.outerHTML || "";
   const legend = document.getElementById('legend').outerHTML;
 
-  // SVG 통합
+  // SVG 저장용 (기존대로)
   const additions = `
     ${defs}
     <g>
@@ -157,7 +157,6 @@ document.getElementById('saveBtn').onclick = async () => {
   `;
   const finalSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h + 140}">${additions}</svg>`;
 
-  // SVG 저장
   const svgBlob = new Blob([finalSvg], {type:'image/svg+xml;charset=utf-8'});
   const svgUrl = URL.createObjectURL(svgBlob);
   const linkSvg = document.createElement('a');
@@ -166,32 +165,43 @@ document.getElementById('saveBtn').onclick = async () => {
   linkSvg.click();
   URL.revokeObjectURL(svgUrl);
 
-  // PNG 저장 (배경 포함)
+  // PNG 저장용 — <image> 직접 로드
+  const bg = new Image();
   const pngCanvas = document.createElement('canvas');
   pngCanvas.width = w;
   pngCanvas.height = h + 140;
   const ctx2 = pngCanvas.getContext('2d');
 
-  const img = new Image();
-  const svgForPng = new Blob([finalSvg], { type: 'image/svg+xml;charset=utf-8' });
-  const svgUrlForPng = URL.createObjectURL(svgForPng);
-
-  img.onload = () => {
+  bg.onload = () => {
     ctx2.clearRect(0, 0, w, h + 140);
-    ctx2.drawImage(img, 0, 0);
-    URL.revokeObjectURL(svgUrlForPng);
+    ctx2.globalAlpha = 0.25;
+    ctx2.drawImage(bg, 0, 0, w, h);
+    ctx2.globalAlpha = 1.0;
 
-    pngCanvas.toBlob(blob => {
-      const pngUrl = URL.createObjectURL(blob);
-      const linkPng = document.createElement('a');
-      linkPng.href = pngUrl;
-      linkPng.download = `${name}.png`;
-      linkPng.click();
-      URL.revokeObjectURL(pngUrl);
-    }, 'image/png');
+    // SVG 기호와 텍스트를 이미지로 다시 로드
+    const overlay = new Image();
+    const overlayBlob = new Blob([svgEl.outerHTML], { type: 'image/svg+xml;charset=utf-8' });
+    const overlayUrl = URL.createObjectURL(overlayBlob);
+
+    overlay.onload = () => {
+      ctx2.drawImage(overlay, 0, 0);
+      ctx2.font = "14px monospace";
+      ctx2.fillStyle = "#444";
+      ctx2.fillText("✨앱 제작 : 연유진🧵", 20, 20);
+
+      pngCanvas.toBlob(blob => {
+        const pngUrl = URL.createObjectURL(blob);
+        const linkPng = document.createElement('a');
+        linkPng.href = pngUrl;
+        linkPng.download = `${name}.png`;
+        linkPng.click();
+        URL.revokeObjectURL(pngUrl);
+      }, 'image/png');
+      URL.revokeObjectURL(overlayUrl);
+    };
+    overlay.src = overlayUrl;
   };
-  img.onerror = e => console.error("❌ PNG 변환 중 이미지 로드 실패:", e);
-  img.src = svgUrlForPng;
+  bg.src = imgSrc;
 };
 </script>
 </body>
