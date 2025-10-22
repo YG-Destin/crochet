@@ -171,37 +171,94 @@ function pickColor(sym){
 }
 
 // 저장
-document.getElementById('saveBtn').onclick=()=>{
-  const name=prompt("저장할 파일 이름을 입력하세요 (예: greenhair):");
-  if(!name)return;
+document.getElementById('saveBtn').onclick = async () => {
+  const name = prompt("저장할 파일 이름을 입력하세요 (예: greenhair):");
+  if (!name) return;
 
-  const svgEl=document.getElementById('svgOut');
-  const viewBox=svgEl.getAttribute('viewBox')||'0 0 800 800';
-  const[, ,w,h]=viewBox.split(' ').map(Number);
-  const svgData=svgEl.outerHTML;
-  const imgSrc=canvas.toDataURL("image/png");
+  const svgEl = document.getElementById('svgOut');
+  const viewBox = svgEl.getAttribute('viewBox') || '0 0 800 800';
+  const [ , , w, h ] = viewBox.split(' ').map(Number);
+  const svgData = svgEl.outerHTML;
+  const imgSrc = canvas.toDataURL("image/png");
 
-  const additions=`
-    <image href="${imgSrc}" x="0" y="0" width="${w}" height="${h}" opacity="0.25"/>
-    <text x="20" y="20" font-size="14" fill="#444">✨️앱 제작 : 연유진🧵</text>
+  // 국제표준 스티치 기호 안내 SVG (도안 저장용)
+  const legendSvg = `
     <g font-family="monospace" font-size="10" transform="translate(20,${h + 20})">
       <text fill="#000">🧶 스티치 기호 안내</text>
-      <text y="15" fill="#444">X — 짧은뜨기 (Single Crochet)</text>
-      <text y="30" fill="#2b6cb0">T — 한길긴뜨기 (Double Crochet)</text>
-      <text y="45" fill="#2563eb">○ — 사슬뜨기 (Chain Stitch)</text>
-      <text y="60" fill="#16a34a">V — 늘림 (Increase)</text>
-      <text y="75" fill="#dc2626">/\ — 줄임 (Decrease)</text>
+      <!-- 사슬뜨기 -->
+      <g transform="translate(0,10)">
+        <use href="#st-chain" x="0" y="10" width="20" height="20" stroke="#2563eb"/>
+        <text x="30" y="22" fill="#2563eb">사슬뜨기 (Chain Stitch)</text>
+      </g>
+      <!-- 짧은뜨기 -->
+      <g transform="translate(0,30)">
+        <use href="#st-sc" x="0" y="10" width="20" height="20" stroke="#444"/>
+        <text x="30" y="22" fill="#444">짧은뜨기 (Single Crochet)</text>
+      </g>
+      <!-- 한길긴뜨기 -->
+      <g transform="translate(180,10)">
+        <use href="#st-dc" x="0" y="10" width="20" height="20" stroke="#2b6cb0"/>
+        <text x="30" y="22" fill="#2b6cb0">한길긴뜨기 (Double Crochet)</text>
+      </g>
+      <!-- 늘림 -->
+      <g transform="translate(180,30)">
+        <use href="#st-inc" x="0" y="10" width="20" height="20" stroke="#16a34a"/>
+        <text x="30" y="22" fill="#16a34a">늘림 (Increase)</text>
+      </g>
+      <!-- 줄임 -->
+      <g transform="translate(360,10)">
+        <use href="#st-dec" x="0" y="10" width="20" height="20" stroke="#dc2626"/>
+        <text x="30" y="22" fill="#dc2626">줄임 (Decrease)</text>
+      </g>
+      <!-- 빼뜨기 -->
+      <g transform="translate(360,30)">
+        <use href="#st-slst" x="0" y="10" width="20" height="20" stroke="#999"/>
+        <text x="30" y="22" fill="#999">빼뜨기 (Slip Stitch)</text>
+      </g>
     </g>
   `;
 
-  const finalSvg=svgData.replace('</svg>',additions+'</svg>');
-  const blob=new Blob([finalSvg],{type:'image/svg+xml;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('a');
-  link.href=url;
-  link.download=`${name}.svg`;
-  link.click();
-  URL.revokeObjectURL(url);
+  // 최종 SVG 조합 (도안 + 원본 + 제작자 + 기호 안내)
+  const additions = `
+    <image href="${imgSrc}" x="0" y="0" width="${w}" height="${h}" opacity="0.25"/>
+    <text x="20" y="20" font-size="14" fill="#444">✨️앱 제작 : 연유진🧵</text>
+    ${legendSvg}
+  `;
+
+  const finalSvg = svgData.replace('</svg>', additions + '</svg>');
+
+  // SVG 저장
+  const svgBlob = new Blob([finalSvg], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  const svgLink = document.createElement('a');
+  svgLink.href = svgUrl;
+  svgLink.download = `${name}.svg`;
+  svgLink.click();
+  URL.revokeObjectURL(svgUrl);
+
+  // PNG 저장
+  const pngCanvas = document.createElement('canvas');
+  pngCanvas.width = w;
+  pngCanvas.height = h;
+  const pngCtx = pngCanvas.getContext('2d');
+
+  const img = new Image();
+  const tmpUrl = URL.createObjectURL(svgBlob);
+
+  await new Promise(resolve => {
+    img.onload = () => {
+      pngCtx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(tmpUrl);
+      resolve();
+    };
+    img.src = tmpUrl;
+  });
+
+  const pngUrl = pngCanvas.toDataURL('image/png');
+  const pngLink = document.createElement('a');
+  pngLink.href = pngUrl;
+  pngLink.download = `${name}.png`;
+  pngLink.click();
 };
 </script>
 </body>
