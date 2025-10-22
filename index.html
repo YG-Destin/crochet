@@ -97,8 +97,25 @@ function pickColor(symbol){
 document.getElementById('saveBtn').onclick = () => {
   const name = prompt("저장할 파일 이름을 입력하세요 (예: greenhair):");
   if (!name) return;
+
   const svgData = document.getElementById('svgOut').outerHTML;
-  const blob = new Blob([svgData], {type:'image/svg+xml;charset=utf-8'});
+
+  // 안내표 SVG 그룹 추가
+  const legend = `
+    <g font-family="monospace" font-size="10" transform="translate(20,780)">
+      <text fill="#000">🧶 스티치 기호 안내</text>
+      <text y="15" fill="#444">X — 짧은뜨기 (Single Crochet)</text>
+      <text y="30" fill="#2b6cb0">T — 한길긴뜨기 (Double Crochet)</text>
+      <text y="45" fill="#2563eb">○ — 사슬뜨기 (Chain Stitch)</text>
+      <text y="60" fill="#16a34a">V — 늘림 (Increase)</text>
+      <text y="75" fill="#dc2626">/\\ — 줄임 (Decrease)</text>
+    </g>
+  `;
+
+  // 안내표를 SVG 맨 아래쪽에 삽입
+  const finalSvg = svgData.replace('</svg>', legend + '</svg>');
+
+  const blob = new Blob([finalSvg], {type:'image/svg+xml;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
